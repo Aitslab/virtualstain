@@ -1,1 +1,4 @@
+# conda enviroment
 
+python==3.6
+bioconda bftools
