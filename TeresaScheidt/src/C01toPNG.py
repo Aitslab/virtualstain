@@ -1,4 +1,3 @@
-
 import os
 os.chdir(r"C:\Users\tsche\Desktop\Master\2. Semester\Project Staining\Images")
 # upper directory of image folders
