@@ -1,6 +1,7 @@
 import skimage.io
 import numpy as np
 
+
 def normalize(input_path, output_path):
     """Normalization of image
     
@@ -21,9 +22,18 @@ def normalize(input_path, output_path):
     skimage.io.imsave(output_path, im)
     
 
-# def noise_reduction():
+def norm_and_stack(images):
+    imagestack = np.dstack(tuple([skimage.io.imread(image) for image in images]))
+    mean = np.mean(imagestack)
+    std = np.std(imagestack)
+    new_im = (imagestack - mean)/std 
     
-
+    return new_im, mean, std
+    
+def unnormalize(images, mean, std):
+    unnorm_images = images * std + mean
+    
+    return unnorm_images
 
 # def downsizing():
     
