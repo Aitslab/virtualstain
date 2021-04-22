@@ -9,19 +9,21 @@ import tensorflow as tf
 import skimage.io
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+
+
 config_vars = {}
 
 config_vars["learning_rate"] = 1e-4
 
 config_vars["epochs"] = 15
 
-config_vars["steps_per_epoch"] = 50
+config_vars["steps_per_epoch"] = 10
 
 config_vars["pixel_depth"] = 16
 
-config_vars["batch_size"] = 3
+config_vars["batch_size"] = 13
 
-config_vars["val_batch_size"] = 1
+config_vars["val_batch_size"] = 4
 
 config_vars["rescale_labels"] = True
 
@@ -29,51 +31,51 @@ config_vars["crop_size"] = 128
 
 def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, max_index):
     do_augmentation = True
-   
-    x_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32)
-    y_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32)    
-     
-    # get one image at a time
-    for i in range(batch_size):
-                   
-        # get random image
-        img_index = np.random.randint(low=0, high=max_index)
-        
-        x = x_images[:,:,img_index]
-        y = y_images[:,:,img_index]
-
-        # get random crop
-        start_dim1 = np.random.randint(low=0, high=x.shape[0] - dim1)
-        start_dim2 = np.random.randint(low=0, high=x.shape[1] - dim2)
-
-        patch_x = x[start_dim1:start_dim1 + dim1, start_dim2:start_dim2 + dim2] #* rescale_factor
-        patch_y = y[start_dim1:start_dim1 + dim1, start_dim2:start_dim2 + dim2] #* rescale_factor_labels
-        
-        if(do_augmentation):
+    while(True):    
+        x_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32)
+        y_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32) 
+         
+        # get one image at a time
+        for i in range(batch_size):
+                       
+            # get random image
+            img_index = np.random.randint(low=0, high=max_index)
             
-            rand_flip = np.random.randint(low=0, high=2)
-            rand_rotate = np.random.randint(low=0, high=4)
-            
-            # flip
-            if(rand_flip == 0):
-                patch_x = np.flip(patch_x, 0)
-                patch_y = np.flip(patch_y, 0)
-            
-            # rotate
-            for rotate_index in range(rand_rotate):
-                patch_x = np.rot90(patch_x)
-                patch_y = np.rot90(patch_y)
+            x = x_images[:,:,img_index]
+            y = y_images[:,:,img_index]
 
-            # illumination
-            ifactor = 1 + np.random.uniform(-0.25, 0.25) # Was before -0.75, 0.75
-            patch_x *= ifactor
+            # get random crop
+            start_dim1 = np.random.randint(low=0, high=x.shape[0] - dim1)
+            start_dim2 = np.random.randint(low=0, high=x.shape[1] - dim2)
+
+            patch_x = x[start_dim1:start_dim1 + dim1, start_dim2:start_dim2 + dim2] #* rescale_factor
+            patch_y = y[start_dim1:start_dim1 + dim1, start_dim2:start_dim2 + dim2] #* rescale_factor_labels
+            
+            if(do_augmentation):
                 
-        # save image to buffer
-        x_train[i, :, :] = patch_x
-        y_train[i, :, :] = patch_y
-        
-    # return the buffer
-    yield(x_train, y_train)
+                rand_flip = np.random.randint(low=0, high=2)
+                rand_rotate = np.random.randint(low=0, high=4)
+                
+                # flip
+                if(rand_flip == 0):
+                    patch_x = np.flip(patch_x, 0)
+                    patch_y = np.flip(patch_y, 0)
+                
+                # rotate
+                for rotate_index in range(rand_rotate):
+                    patch_x = np.rot90(patch_x)
+                    patch_y = np.rot90(patch_y)
+
+                # illumination
+                ifactor = 1 + np.random.uniform(-0.25, 0.25) # Was before -0.75, 0.75
+                patch_x *= ifactor
+                    
+            # save image to buffer
+            x_train[i, :, :] = patch_x
+            y_train[i, :, :] = patch_y
+            
+        # return the buffer
+        yield(x_train, y_train)
     
         
 CONST_DO_RATE = 0.5
@@ -178,7 +180,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        15
+        130
     )
 
     val_gen = random_sample_generator(
@@ -186,7 +188,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["val_batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        3
+        24
     )
     
     
@@ -207,18 +209,19 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
 
     # TRAIN
     try:
-        statistics = model.fit_generator(
-            generator=train_gen,
-            #steps_per_epoch=config_vars["steps_per_epoch"],
+        statistics = model.fit(
+            train_gen,
+            steps_per_epoch=config_vars["steps_per_epoch"],
             epochs=config_vars["epochs"],
             validation_data=val_gen,
-            validation_steps=int(len(validation_images_x)/config_vars["val_batch_size"]),
+            validation_steps=6,
             #callbacks = [checkpoint, callback_csv], #, TensorboardBatch(8, log_dir=paths["log_dir"])],
             verbose = 1
         )
     except KeyboardInterrupt as e:
         print("Aborted...")
 
-    #print("Saving model...")
-    #model.save_weights(paths["model_file"])
+    print("Saving model...")
+    model.save('test_model_d02')
     print('Done! :)')
+    return statistics

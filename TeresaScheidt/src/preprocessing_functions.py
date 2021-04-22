@@ -39,6 +39,21 @@ def norm_and_stack(images):
     
     return new_im, mean, std
 
+def norm(images, mean, std):
+    """Batch-Normalization and stacking of images
+    
+    this function takes a folder of images (e.g. defined by glob.glob(r"path\*.png"))
+    and stacks the images into one array
+    the array is normalized by the mean and std of whole array
+    
+    returns normalizes imagestack 
+    
+    """
+    imagestack = np.dstack(tuple([skimage.io.imread(image) for image in images]))
+    new_im = (imagestack - mean)/std 
+    
+    return new_im
+
     
 def unnormalize(images, mean, std):
     """Unnormalizes images 
