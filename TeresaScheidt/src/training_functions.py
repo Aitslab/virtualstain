@@ -21,7 +21,7 @@ config_vars["steps_per_epoch"] = 10
 
 config_vars["pixel_depth"] = 16
 
-config_vars["batch_size"] = 13
+config_vars["batch_size"] = 10
 
 config_vars["val_batch_size"] = 4
 
@@ -41,8 +41,8 @@ def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, max_inde
             # get random image
             img_index = np.random.randint(low=0, high=max_index)
             
-            x = x_images[:,:,img_index]
-            y = y_images[:,:,img_index]
+            x = x_images[img_index]
+            y = y_images[img_index]
 
             # get random crop
             start_dim1 = np.random.randint(low=0, high=x.shape[0] - dim1)
@@ -156,14 +156,15 @@ def get_model(dim1, dim2):
 
     y = keras.layers.Convolution2D(64, 3, **option_dict_conv)(y)
     y = keras.layers.BatchNormalization(**option_dict_bn)(y)
-    y = keras.layers.Convolution2D(1, 1, **option_dict_conv)(y)
+    y = keras.layers.Convolution2D(1, 1, **option_dict_conv)(y) #for 1 output channel 
+    #y = keras.layers.Convolution2D(2, 1, **option_dict_conv)(y) #for 2 output channels
     y = keras.layers.Activation(activation='relu')(y) 
 
     model = keras.models.Model(x, y)
     return model
     
     
-def train(train_images_x,train_images_y, validation_images_x, validation_images_y):
+def train(train_images_x,train_images_y, validation_images_x, validation_images_y, name):
 
     # build session running on GPU 1
     configuration = tf.compat.v1.ConfigProto()
@@ -180,7 +181,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        130
+        40
     )
 
     val_gen = random_sample_generator(
@@ -188,7 +189,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["val_batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        24
+        12
     )
     
     
@@ -214,7 +215,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
             steps_per_epoch=config_vars["steps_per_epoch"],
             epochs=config_vars["epochs"],
             validation_data=val_gen,
-            validation_steps=6,
+            validation_steps=3,
             #callbacks = [checkpoint, callback_csv], #, TensorboardBatch(8, log_dir=paths["log_dir"])],
             verbose = 1
         )
@@ -222,6 +223,6 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         print("Aborted...")
 
     print("Saving model...")
-    model.save('test_model_d02')
+    model.save(name)
     print('Done! :)')
     return statistics
