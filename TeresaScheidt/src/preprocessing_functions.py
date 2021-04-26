@@ -1,55 +1,37 @@
 import skimage.io
+import cv2
 import numpy as np
 
 
-def normalize(input_path, output_path):
-    """Normalization of image
-    
-    This function takes an image from <input_path> and normalizes 
-    is according to (im - mean)/std and projects to [0,1]
-    
-    saves normalized image as 8bit image to <output_path>"""
-    
+def stack_images(images):
 
-    orig_im = skimage.io.imread(input_path)
-    mean = np.mean(orig_im)
-    std = np.std(orig_im)
-    new_im = (orig_im - mean)/std 
-    min_value = np.min(new_im)
-    max_value = np.max(new_im)
-    im = (new_im - min_value) / (max_value - min_value) 
-    im = skimage.img_as_ubyte(im)
-    skimage.io.imsave(output_path, im)
+    stack = []
+    for image in images: 
+        im = cv2.imread(image, cv2.IMREAD_UNCHANGED)
+        if np.size(im.shape) > 2:
+            im = im[:,:,0]
+        stack.append(im)
+    stack = np.stack(stack, axis=0)
     
+    return stack
 
-def norm_and_stack(images):
-    """Batch-Normalization and stacking of images
-    
-    this function takes a folder of images (e.g. defined by glob.glob(r"path\*.png"))
-    and stacks the images into one array
-    the array is normalized by the mean and std of whole array
-    
-    returns normalizes imagestack, mean and std 
-    
-    """
-    imagestack = np.dstack(tuple([skimage.io.imread(image) for image in images]))
+def norm_batch(imagestack):
     mean = np.mean(imagestack)
     std = np.std(imagestack)
-    new_im = (imagestack - mean)/std 
+    norm_im = (imagestack - mean)/std 
     
-    return new_im, mean, std
+    return norm_im, mean, std
+    
 
-def norm(images, mean, std):
-    """Batch-Normalization and stacking of images
+def norm(imagestack, mean, std):
+    """Normalization of imagestack
     
-    this function takes a folder of images (e.g. defined by glob.glob(r"path\*.png"))
-    and stacks the images into one array
-    the array is normalized by the mean and std of whole array
+    this function takes a stack of images
+    the array is normalized by the defined mean and std
     
-    returns normalizes imagestack 
-    
+    returns normalized imagestack 
     """
-    imagestack = np.dstack(tuple([skimage.io.imread(image) for image in images]))
+    
     new_im = (imagestack - mean)/std 
     
     return new_im
@@ -64,15 +46,51 @@ def unnormalize(images, mean, std):
     takes fixed mean and std from normalization 
     takes single images or stacks of images as arrays
     
-    returns images as uint8"""
+    returns images """
     
     unnorm_images = images * std + mean
-    unnorm_images = unnorm_images.astype(np.uint8)
+    
     
     return unnorm_images
 
 
+def normalize(input_path, output_path):
+    """Normalization of image
     
+    This function takes an image from <input_path> and normalizes 
+    is according to (im - mean)/std and projects to [0,1]
+    
+    saves normalized image as 8bit image to <output_path>"""
+    
+
+    orig_im = cv2.imread(input_path, cv2.IMREAD_UNCHANGED)
+    mean = np.mean(orig_im)
+    std = np.std(orig_im)
+    new_im = (orig_im - mean)/std 
+    min_value = np.min(new_im)
+    max_value = np.max(new_im)
+    im = (new_im - min_value) / (max_value - min_value) 
+    im = skimage.img_as_ubyte(im)
+    skimage.io.imsave(output_path, im)
+    
+    
+
+def norm_and_stack(images):
+    """Batch-Normalization and stacking of images
+    
+    this function takes a folder of images (e.g. defined by glob.glob(r"path\*.png"))
+    and stacks the images into one array
+    the array is normalized by the mean and std of whole array
+    
+    returns normalized imagestack, mean and std 
+    
+    """
+    imagestack = np.dstack(tuple([cv2.imread(image, cv2.IMREAD_UNCHANGED) for image in images]))
+    mean = np.mean(imagestack)
+    std = np.std(imagestack)
+    new_im = (imagestack - mean)/std 
+    
+    return new_im, mean, std
     
 
 
