@@ -3,15 +3,27 @@ import cv2
 import numpy as np
 
 
-def stack_images(images):
+def stack_images(images, num_channels = 1):
 
     stack = []
-    for image in images: 
-        im = cv2.imread(image, cv2.IMREAD_UNCHANGED)
-        if np.size(im.shape) > 2:
-            im = im[:,:,0]
-        stack.append(im)
-    stack = np.stack(stack, axis=0)
+    if num_channels == 1: 
+        for image in images: 
+            im = cv2.imread(image, cv2.IMREAD_UNCHANGED)
+            if np.size(im.shape) > 2:
+                im = im[:,:,0]
+            stack.append(im)
+        stack = np.stack(stack, axis=0)
+    if num_channels == 2:
+        num_outputs = int(len(images)/num_channels)
+        for num in range(num_outputs):
+            im1 = cv2.imread(images[2*num], cv2.IMREAD_UNCHANGED)
+            im2 = cv2.imread(images[2*num+1], cv2.IMREAD_UNCHANGED)
+            if np.size(im1.shape) > 2:
+                im1 = im1[:,:,0]
+                im2 = im2[:,:,0]
+            im = np.stack([im1, im2], axis = 2)
+            stack.append(im)
+        stack = np.stack(stack, axis=0)
     
     return stack
 

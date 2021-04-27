@@ -29,11 +29,11 @@ config_vars["rescale_labels"] = True
 
 config_vars["crop_size"] = 128
 
-def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, max_index):
+def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, y_channels, max_index):
     do_augmentation = True
     while(True):    
-        x_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32)
-        y_train = np.zeros((batch_size, dim1, dim2), dtype=np.float32) 
+        x_train = np.zeros((batch_size, dim1, dim2, 1), dtype=np.float32)
+        y_train = np.zeros((batch_size, dim1, dim2, y_channels), dtype=np.float32) 
          
         # get one image at a time
         for i in range(batch_size):
@@ -71,8 +71,8 @@ def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, max_inde
                 patch_x *= ifactor
                     
             # save image to buffer
-            x_train[i, :, :] = patch_x
-            y_train[i, :, :] = patch_y
+            x_train[i, :, :, 0] = patch_x
+            y_train[i, :, :, 0:y_channels] = patch_y
             
         # return the buffer
         yield(x_train, y_train)
@@ -156,8 +156,8 @@ def get_model(dim1, dim2):
 
     y = keras.layers.Convolution2D(64, 3, **option_dict_conv)(y)
     y = keras.layers.BatchNormalization(**option_dict_bn)(y)
-    y = keras.layers.Convolution2D(1, 1, **option_dict_conv)(y) #for 1 output channel 
-    #y = keras.layers.Convolution2D(2, 1, **option_dict_conv)(y) #for 2 output channels
+    #y = keras.layers.Convolution2D(1, 1, **option_dict_conv)(y) #for 1 output channel 
+    y = keras.layers.Convolution2D(2, 1, **option_dict_conv)(y) #for 2 output channels
     y = keras.layers.Activation(activation='relu')(y) 
 
     model = keras.models.Model(x, y)
@@ -181,6 +181,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
+        2,
         40
     )
 
@@ -189,6 +190,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["val_batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
+        2,
         12
     )
     
