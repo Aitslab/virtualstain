@@ -8,33 +8,33 @@ import keras.models
 import tensorflow as tf
 import skimage.io
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
+from keras.callbacks import ModelCheckpoint
 
 
 config_vars = {}
 
 config_vars["learning_rate"] = 1e-4
 
-config_vars["epochs"] = 15
+config_vars["epochs"] = 50
 
 config_vars["steps_per_epoch"] = 10
 
 config_vars["pixel_depth"] = 16
 
-config_vars["batch_size"] = 10
+config_vars["batch_size"] = 32
 
-config_vars["val_batch_size"] = 4
+config_vars["val_batch_size"] = 32
 
 config_vars["rescale_labels"] = True
 
 config_vars["crop_size"] = 128
 
-def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, y_channels, max_index):
+def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, y_channels):
     do_augmentation = True
     while(True):    
         x_train = np.zeros((batch_size, dim1, dim2, 1), dtype=np.float32)
         y_train = np.zeros((batch_size, dim1, dim2, y_channels), dtype=np.float32) 
-         
+        max_index = x_images.shape[0] 
         # get one image at a time
         for i in range(batch_size):
                        
@@ -67,8 +67,8 @@ def random_sample_generator(x_images, y_images, batch_size, dim1, dim2, y_channe
                     patch_y = np.rot90(patch_y)
 
                 # illumination
-                ifactor = 1 + np.random.uniform(-0.25, 0.25) # Was before -0.75, 0.75
-                patch_x *= ifactor
+                #ifactor = 1 + np.random.uniform(-0.25, 0.25) # Was before -0.75, 0.75
+                #patch_x *= ifactor
                     
             # save image to buffer
             x_train[i, :, :, 0] = patch_x
@@ -181,8 +181,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        2,
-        40
+        2
     )
 
     val_gen = random_sample_generator(
@@ -190,8 +189,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["val_batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        2,
-        12
+        2
     )
     
     
@@ -209,6 +207,13 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
 
     model.compile(loss=loss, metrics=metrics, optimizer=optimizer)
 
+    callback_csv = keras.callbacks.CSVLogger(filename=r"C:\Users\tsche\Desktop\Master\2. Semester\Project Staining\gitrepo\TeresaScheidt\models\checkpoints\tmp")
+
+    checkpoint = ModelCheckpoint(name, monitor='val_loss', verbose=1,
+        save_best_only=True, mode='auto')
+    
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
+        mode='auto', baseline=None, restore_best_weights=False)
 
     # TRAIN
     try:
@@ -217,14 +222,14 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
             steps_per_epoch=config_vars["steps_per_epoch"],
             epochs=config_vars["epochs"],
             validation_data=val_gen,
-            validation_steps=3,
-            #callbacks = [checkpoint, callback_csv], #, TensorboardBatch(8, log_dir=paths["log_dir"])],
+            validation_steps=10,
+            callbacks = [checkpoint, early_stop], #, TensorboardBatch(8, log_dir=paths["log_dir"])],
             verbose = 1
         )
     except KeyboardInterrupt as e:
         print("Aborted...")
 
-    print("Saving model...")
-    model.save(name)
+    #print("Saving model...")
+    #model.save(name)
     print('Done! :)')
     return statistics
