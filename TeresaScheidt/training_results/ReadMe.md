@@ -1,0 +1,1 @@
+The folders contain predicted images and loss curves of the corresponding model. For d1d2_8/16/32/52im the input image and the actual d1 and d2 images can be found in ReferenceImage.
