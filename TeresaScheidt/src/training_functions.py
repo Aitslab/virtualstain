@@ -200,6 +200,9 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
     model.summary()
 
     loss = tf.keras.losses.MSE
+    
+    def SSIMLoss(y_true, y_pred):
+        return 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, 1.0))
 
     metrics = ["mse", "mae"]
 
