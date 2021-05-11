@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 
-def stack_images(images, num_channels = 1):
+def stack_images(images, num_channels):
 
     stack = []
     if num_channels == 1: 
@@ -48,11 +48,16 @@ def norm(imagestack, mean, std):
     
     return new_im
 
-def recenter(imagestack, center, std):
+def recenter(imagestack, center=0.5, std=0.125):
     new_im = imagestack * std + center
     
     return new_im
+ 
+def center_back(imagestack, center=0.5, std=0.125):
+    new_im = (imagestack - center)/std
     
+    return new_im
+ 
 def unnormalize(images, mean, std):
     """Unnormalizes images 
     

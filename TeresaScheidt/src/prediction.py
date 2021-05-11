@@ -14,6 +14,8 @@ import tensorflow as tf
 import keras
 import math
 
+import loss_functions as lf
+
 def predict(model, images, dim1, dim2, num_outputs=1):
     """Predict a multiple stack of 7 images to 1 channel
 
@@ -83,3 +85,26 @@ def predict(model, images, dim1, dim2, num_outputs=1):
             k += 1
 
     return output
+   
+from skimage.metrics import structural_similarity as ssim
+   
+def eval(model, x_images, y_images, dim):
+    pred_images = model.predict(x_images, batch_size = 4, verbose = 1)
+    print('Image prediction done')
+    
+    MAE1 = np.mean(lf.mae(y_images[:,:,:,0], pred_images[:,:,:,0]))
+    MSE1 = np.mean(lf.mse(y_images[:,:,:,0], pred_images[:,:,:,0]))
+    MAE2 = np.mean(lf.mae(y_images[:,:,:,1], pred_images[:,:,:,1]))
+    MSE2 = np.mean(lf.mse(y_images[:,:,:,1], pred_images[:,:,:,1]))
+    SSIM1 = 0
+    SSIM2 = 0
+    for y_true, y_pred in zip(y_images[:,:,:,0], pred_images[:,:,:,0]):
+        SSIM1 += ssim(y_true, y_pred, data_range=y_true.max() - y_true.min())
+    SSIM1 /= y_images.shape[0]
+    for y_true, y_pred in zip(y_images[:,:,:,1], pred_images[:,:,:,1]):
+        SSIM2 += ssim(y_true, y_pred, data_range=y_true.max() - y_true.min())   
+    SSIM2 /= y_images.shape[0]
+
+    
+    
+    return MAE1, MSE1, SSIM1, MAE2, MSE2, SSIM2

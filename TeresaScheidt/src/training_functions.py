@@ -9,6 +9,7 @@ import tensorflow as tf
 import skimage.io
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint
+import loss_functions as lf
 
 
 config_vars = {}
@@ -85,10 +86,10 @@ option_dict_bn = {"momentum" : 0.9}
 keras.backend.set_floatx("float32")
 
 # returns a model from gray input to 64 channels of the same size
-def get_model(dim1, dim2):
+def get_model(dim1, dim2, y_channels):
     
     x = keras.layers.Input(shape=(dim1, dim2, 1), dtype="float32")
-    print('Input', x.shape)
+    #print('Input', x.shape)
     a = keras.layers.Convolution2D(64, 3, **option_dict_conv)(x)  
     a = keras.layers.BatchNormalization(**option_dict_bn)(a)
     
@@ -97,13 +98,13 @@ def get_model(dim1, dim2):
 
     
     y = keras.layers.MaxPooling2D()(a)
-    print('1. Conv', y.shape)
+    #print('1. Conv', y.shape)
     b = keras.layers.Convolution2D(128, 3, **option_dict_conv)(y)
     b = keras.layers.BatchNormalization(**option_dict_bn)(b)
 
     b = keras.layers.Convolution2D(128, 3, **option_dict_conv)(b)
     b = keras.layers.BatchNormalization(**option_dict_bn)(b)
-    print('2. conv', b.shape)
+    #print('2. conv', b.shape)
     
     y = keras.layers.MaxPooling2D()(b)
     
@@ -112,7 +113,7 @@ def get_model(dim1, dim2):
 
     c = keras.layers.Convolution2D(256, 3, **option_dict_conv)(c)
     c = keras.layers.BatchNormalization(**option_dict_bn)(c)
-    print('3. conv', c.shape)
+    #print('3. conv', c.shape)
     
     y = keras.layers.MaxPooling2D()(c)
     
@@ -121,14 +122,14 @@ def get_model(dim1, dim2):
 
     d = keras.layers.Convolution2D(512, 3, **option_dict_conv)(d)
     d = keras.layers.BatchNormalization(**option_dict_bn)(d)
-    print('4. conv', d.shape)
+    #print('4. conv', d.shape)
     
     # UP
 
     d = keras.layers.UpSampling2D()(d)
     
     y = keras.layers.merge.concatenate([d, c], axis=3)
-    print('1. UpConv', y.shape)
+    #print('1. UpConv', y.shape)
     e = keras.layers.Convolution2D(256, 3,  **option_dict_conv)(y)
     e = keras.layers.BatchNormalization(**option_dict_bn)(e)
 
@@ -139,7 +140,7 @@ def get_model(dim1, dim2):
 
     
     y = keras.layers.merge.concatenate([e, b], axis=3)
-    print('2. UpConv',y.shape)
+    #print('2. UpConv',y.shape)
     f = keras.layers.Convolution2D(128, 3, **option_dict_conv)(y)
     f = keras.layers.BatchNormalization(**option_dict_bn)(f)
 
@@ -150,21 +151,20 @@ def get_model(dim1, dim2):
 
     
     y = keras.layers.merge.concatenate([f, a], axis=3)
-    print('3. UpConv',y.shape)
+    #print('3. UpConv',y.shape)
     y = keras.layers.Convolution2D(64, 3, **option_dict_conv)(y)
     y = keras.layers.BatchNormalization(**option_dict_bn)(y)
 
     y = keras.layers.Convolution2D(64, 3, **option_dict_conv)(y)
     y = keras.layers.BatchNormalization(**option_dict_bn)(y)
-    #y = keras.layers.Convolution2D(1, 1, **option_dict_conv)(y) #for 1 output channel 
-    y = keras.layers.Convolution2D(2, 1, **option_dict_conv)(y) #for 2 output channels
-    y = keras.layers.Activation(activation='relu')(y) 
+    y = keras.layers.Convolution2D(y_channels, 1, **option_dict_conv)(y)
+    #y = keras.layers.Activation(activation='relu')(y) 
 
     model = keras.models.Model(x, y)
     return model
     
     
-def train(train_images_x,train_images_y, validation_images_x, validation_images_y, name):
+def train(train_images_x,train_images_y, validation_images_x, validation_images_y, y_channels, name, model=None):
 
     # build session running on GPU 1
     configuration = tf.compat.v1.ConfigProto()
@@ -181,7 +181,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        2
+        y_channels
     )
 
     val_gen = random_sample_generator(
@@ -189,20 +189,22 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
         config_vars["val_batch_size"],
         config_vars["crop_size"],
         config_vars["crop_size"],
-        2
+        y_channels
     )
     
     
 
     # build model
-    model = get_model(config_vars["crop_size"], config_vars["crop_size"])
-        
-    model.summary()
-
-    loss = tf.keras.losses.MSE
+    if model == None: 
+        model = get_model(config_vars["crop_size"], config_vars["crop_size"], y_channels)
+    else:
+        model = model
     
-    def SSIMLoss(y_true, y_pred):
-        return 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, 1.0))
+    model.summary()
+    
+    SSIM = lf.SSIMLoss
+    
+    loss = tf.keras.losses.MSE
 
     metrics = ["mse", "mae"]
 
@@ -215,7 +217,7 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
     checkpoint = ModelCheckpoint(name, monitor='val_loss', verbose=1,
         save_best_only=True, mode='auto')
     
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1,
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1,
         mode='auto', baseline=None, restore_best_weights=False)
 
     # TRAIN
@@ -236,3 +238,23 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
     #model.save(name)
     print('Done! :)')
     return statistics
+    
+    
+    
+def eval(model, x_images, y_images):
+
+    image_tensor = tf.convert_to_tensor(image, dtype=tf.float32)
+
+# Add dimension to match with input mode 
+    image_tensor = tf.expand_dims(image_tensor, 0)
+    
+    image_gen = random_sample_generator(
+    x_images, y_images,
+    config_vars["batch_size"],
+    config_vars["crop_size"],
+    config_vars["crop_size"],
+    2)
+    
+    metrics = model.evaluate(image_gen, batch_size=32, steps=10)
+    
+    return metrics
