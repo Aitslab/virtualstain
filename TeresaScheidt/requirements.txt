@@ -3,3 +3,7 @@
 python==3.6
 bioconda bftools
 Keras==2.3.0
+cv2
+numpy
+tensorflow
+skimage
