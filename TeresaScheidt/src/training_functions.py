@@ -204,7 +204,11 @@ def train(train_images_x,train_images_y, validation_images_x, validation_images_
     
     SSIM = lf.SSIMLoss
     
-    loss = tf.keras.losses.MSE
+    mse_ssim = lf.mse_ssim
+    
+    mse = tf.keras.losses.MSE
+    
+    loss = mse_ssim
 
     metrics = ["mse", "mae"]
 
